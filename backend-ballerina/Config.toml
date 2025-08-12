@@ -1,0 +1,5 @@
+host = "db.jknffzcmoojysdecocbj.supabase.co"
+username = "postgres"
+password = "Skynettheone#1"
+database = "postgres"
+port = 5432

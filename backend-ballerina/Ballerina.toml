@@ -1,0 +1,17 @@
+[package]
+org = "tharuka_sanketh"
+name = "backend_ballerina"
+version = "0.1.0"
+distribution = "2201.12.6"
+
+[build-options]
+observabilityIncluded = true
+
+[dependencies]
+"ballerinax/postgresql" = "1.16.1"
+
+[[platform.java17.dependency]]
+path = "./lib/postgresql-42.7.4.jar"
+artifactId = "postgresql"
+version = "42.7.4"
+groupId = "org.postgresql"
