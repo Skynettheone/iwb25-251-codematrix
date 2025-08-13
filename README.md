@@ -49,6 +49,11 @@ To run the full system, start all four services in **separate terminal windows**
 
 ### **1. Clone the Repository**
 
+```bash
+git clone https://github.com/Skynettheone/Ballerina_O2.git
+cd Ballerina_O2
+```
+
 1.  **Backend Service (Ballerina)**
     * Navigate to the `backend-ballerina` directory.
     * On Windows: Double-click and run the `setup_and_run.bat`. On macOS/Linux: `sh setup_and_run.sh`
