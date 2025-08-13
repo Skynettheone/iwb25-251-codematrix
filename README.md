@@ -48,8 +48,6 @@ To run the full system, start all four services in **separate terminal windows**
 ---
 
 ### **1. Clone the Repository**
-```sh
-git clone <https://github.com/Skynettheone/Ballerina_O2>
 
 1.  **Backend Service (Ballerina)**
     * Navigate to the `backend-ballerina` directory.
