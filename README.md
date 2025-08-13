@@ -18,7 +18,7 @@ The project follows a modern, decoupled microservices architecture:
 * **POS Client (JavaFX):** A cross-platform desktop application for processing sales.
 * **Admin Dashboard (React):** A web-based interface for analytics and management.
 * **Backend API (Ballerina):** The central API hub that handles all business logic and integrations.
-* **Analytics Service (Python/Flask):** A dedicated service for AI-driven stock forecasting and customer segmentation.
+* **Analytics Service (Python/FastAPI):** A dedicated service for AI-driven stock forecasting and customer segmentation.
 * **Database (PostgreSQL on Supabase):** The central data store for all transactions and customer information.
 
 ---
@@ -67,7 +67,7 @@ cd Ballerina_O2
         * macOS/Linux: `source venv/bin/activate`
         * Windows: `.\venv\Scripts\activate`
     * Install dependencies: `pip install -r requirements.txt`
-    * Run the service: `flask run`
+    * Run the service: `uvicorn app:app --host 0.0.0.0 --port 5000`
     * The service will be available at: `http://localhost:5000`
 
 3.  **POS Client (JavaFX)**
