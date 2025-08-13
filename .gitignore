@@ -1,0 +1,18 @@
+# ballerina build artifacts
+/target/
+
+# java Maven build artifacts
+/pos-client-javafx/target/
+
+# python virtual environment and cache
+/analytics-python/venv/
+/analytics-python/__pycache__/
+
+# node.js dependencies
+/dashboard-web/node_modules/
+
+# IDE and OS files
+.vscode/
+.idea/
+
+Config.toml

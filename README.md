@@ -23,35 +23,68 @@ The project follows a modern, decoupled microservices architecture:
 
 ---
 
-## **Getting Started: How to Run the System**
 
-To run the full system, you need to start all four services in separate terminals.
+## **Getting Started & Setup Instructions**
+
+This guide explains how to set up and run the entire project.  
+The process has been automated to be as simple as possible for all users (team members and evaluators).
+
+### **Prerequisites**
+
+Ensure you have the following software installed on your system:
+
+- [Git](https://git-scm.com/downloads)
+- [Java JDK](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html) (Version 17 or later)
+- [Ballerina](https://ballerina.io/downloads/) (Latest version)
+- [Python](https://www.python.org/downloads/) (Version 3.9 or later)
+- [Node.js and npm](https://nodejs.org/)
+
+---
+
+## **How to Run the System**
+
+To run the full system, start all four services in **separate terminal windows**.
+
+---
+
+### **1. Clone the Repository**
+```sh
+git clone <https://github.com/Skynettheone/Ballerina_O2>
 
 1.  **Backend Service (Ballerina)**
     * Navigate to the `backend-ballerina` directory.
-    * Ensure your `Config.toml` file is present and has the correct database credentials.
+    * On Windows: Double-click and run the `setup_and_run.bat`. On macOS/Linux: `sh setup_and_run.sh`
+    * Ensure your `Config.toml` file is present after running the above.
     * Run the command: `bal run`
     * The service will be available at `http://localhost:9090`.
 
-2.  **Analytics Service (Python)**
+3. **Analytics Service (Python)**
     * Navigate to the `analytics-python` directory.
-    * Activate the Python virtual environment: `source venv/bin/activate` (macOS/Linux) or `.\venv\Scripts\activate` (Windows).
-    * Run the command: `flask run`
-    * The service will be available at `http://localhost:5000`.
+    * Create and activate a Python virtual environment:
+        * macOS/Linux: `source venv/bin/activate`
+        * Windows: `.\venv\Scripts\activate`
+    * Install dependencies: `pip install -r requirements.txt`
+    * Run the service: `flask run`
+    * The service will be available at: `http://localhost:5000`
 
 3.  **POS Client (JavaFX)**
     * Navigate to the `pos-client-javafx` directory.
     * Run the command: `mvn javafx:run`
     * The desktop application window will appear.
 
-4.  **Admin Dashboard (React)**
+5. **Admin Dashboard (React)**
     * Navigate to the `dashboard-web` directory.
-    * Run the command: `npm start`
-    * A new browser tab will open automatically at `http://localhost:3000`.
+    * Install dependencies: `npm install`
+    * Run the application: `npm start`
+    * A new browser tab will open automatically at: `http://localhost:3000`
 
 ---
 
 ## **Changelog / Update Log**
+
+* **2025-08-13:**
+    * **[DONE]** Created a unified, automated setup process for all users using setup scripts.
+    * **[DONE]** Updated the project README.md with the new setup instructions.
 
 * **2025-08-12:**
     * **[DONE]** Initialized project structure and starter code for all four services.
