@@ -24,7 +24,7 @@ const Icons = {
   ),
   Seasonal: () => (
     <svg viewBox="0 0 24 24" fill="currentColor" className="nav-item-icon">
-      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M7,9A1,1 0 0,1 8,10A1,1 0 0,1 7,11A1,1 0 0,1 6,10A1,1 0 0,1 7,9M12,9A1,1 0 0,1 13,10A1,1 0 0,1 12,11A1,1 0 0,1 11,10A1,1 0 0,1 12,9M17,9A1,1 0 0,1 18,10A1,1 0 0,1 17,11A1,1 0 0,1 16,10A1,1 0 0,1 17,9M12,14L15.15,16.85L14.54,17.46L12,14.92L9.46,17.46L8.85,16.85L12,14Z"/>
+      <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M7,7.5A1.5,1.5 0 0,1 8.5,9A1.5,1.5 0 0,1 7,10.5A1.5,1.5 0 0,1 5.5,9A1.5,1.5 0 0,1 7,7.5M12,7.5A1.5,1.5 0 0,1 13.5,9A1.5,1.5 0 0,1 12,10.5A1.5,1.5 0 0,1 10.5,9A1.5,1.5 0 0,1 12,7.5M17,7.5A1.5,1.5 0 0,1 18.5,9A1.5,1.5 0 0,1 17,10.5A1.5,1.5 0 0,1 15.5,9A1.5,1.5 0 0,1 17,7.5M7,13.5A1.5,1.5 0 0,1 8.5,15A1.5,1.5 0 0,1 7,16.5A1.5,1.5 0 0,1 5.5,15A1.5,1.5 0 0,1 7,13.5M12,13.5A1.5,1.5 0 0,1 13.5,15A1.5,1.5 0 0,1 12,16.5A1.5,1.5 0 0,1 10.5,15A1.5,1.5 0 0,1 12,13.5M17,13.5A1.5,1.5 0 0,1 18.5,15A1.5,1.5 0 0,1 17,16.5A1.5,1.5 0 0,1 15.5,15A1.5,1.5 0 0,1 17,13.5Z"/>
     </svg>
   ),
   TrendUp: () => (
@@ -245,9 +245,17 @@ function App() {
 
     return (
       <div className="predictions-page">
-        <div className="page-header">
-          <h1 className="page-title">Smart Predictions</h1>
-          <p className="page-description">AI-powered inventory forecasting and demand prediction</p>
+        <div className="dashboard-header">
+          <div>
+            <h1 className="page-title">Smart Predictions</h1>
+            <p className="page-description">AI-powered inventory forecasting and demand prediction</p>
+          </div>
+          <div className="header-actions">
+            <div className="status-indicator">
+              <div className={`status-dot ${data.systemHealth?.status === 'healthy' ? 'healthy' : 'warning'}`}></div>
+              <span>System {data.systemHealth?.status === 'healthy' ? 'Operational' : 'Checking'}</span>
+            </div>
+          </div>
         </div>
 
         <div className="prediction-card">
@@ -361,7 +369,7 @@ function App() {
               <div className="single-prediction">
                 <div className="result-card">
                   <div className="card-header">
-                    <h3>Forecast: {prediction.product_info?.name || selectedProduct}</h3>
+                    <h3>Forecast: {prediction.product_name || selectedProduct}</h3>
                     <span className={`confidence-badge ${prediction.confidence_score > 0.8 ? 'high' : prediction.confidence_score > 0.6 ? 'medium' : 'low'}`}>
                       {(prediction.confidence_score * 100).toFixed(1)}% Confidence
                     </span>
@@ -402,7 +410,7 @@ function App() {
                     <div className="summary-stat">
                       <span className="stat-label">Estimated Revenue</span>
                       <span className="stat-value">
-                        {formatCurrency(prediction.total_forecast * (prediction.product_info?.price || 0))}
+                        {formatCurrency(prediction.total_forecast * (prediction.product_price || 0))}
                       </span>
                     </div>
                   </div>
@@ -416,7 +424,7 @@ function App() {
                   </div>
                   
                   <div className="products-grid">
-                    {prediction.products?.map((productPrediction, index) => (
+                    {Array.isArray(prediction) ? prediction.map((productPrediction, index) => (
                       <div key={index} className="product-prediction-item">
                         <div className="product-info">
                           <h4>{productPrediction.product_name}</h4>
@@ -427,11 +435,15 @@ function App() {
                             {productPrediction.total_forecast} units
                           </div>
                           <div className="prediction-revenue">
-                            {formatCurrency(productPrediction.estimated_revenue || 0)}
+                            {formatCurrency(productPrediction.total_forecast * 100 || 0)}
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="no-predictions">
+                        <p>No prediction data available</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -468,10 +480,18 @@ function App() {
 
     return (
       <div className="analytics-page">
-        <div className="page-header">
-          <h1 className="page-title">📊 Analytics</h1>
-          <p className="page-description">Comprehensive business insights and data analysis</p>
-          <button onClick={fetchAnalytics} className="refresh-btn">Refresh Analytics</button>
+        <div className="dashboard-header">
+          <div>
+            <h1 className="page-title">Analytics</h1>
+            <p className="page-description">Comprehensive business insights and data analysis</p>
+          </div>
+          <div className="header-actions">
+            <button onClick={fetchAnalytics} className="refresh-btn">Refresh Analytics</button>
+            <div className="status-indicator">
+              <div className={`status-dot ${data.systemHealth?.status === 'healthy' ? 'healthy' : 'warning'}`}></div>
+              <span>System {data.systemHealth?.status === 'healthy' ? 'Operational' : 'Checking'}</span>
+            </div>
+          </div>
         </div>
 
         <div className="analytics-grid">
@@ -594,9 +614,17 @@ function App() {
 
     return (
       <div className="seasonal-page">
-        <div className="page-header">
-          <h1 className="page-title">Seasonal Analysis</h1>
-          <p className="page-description">Analyze seasonal trends and predict demand for Sri Lankan seasons</p>
+        <div className="dashboard-header">
+          <div>
+            <h1 className="page-title">Seasonal Analysis</h1>
+            <p className="page-description">Analyze seasonal trends and predict demand for Sri Lankan seasons</p>
+          </div>
+          <div className="header-actions">
+            <div className="status-indicator">
+              <div className={`status-dot ${data.systemHealth?.status === 'healthy' ? 'healthy' : 'warning'}`}></div>
+              <span>System {data.systemHealth?.status === 'healthy' ? 'Operational' : 'Checking'}</span>
+            </div>
+          </div>
         </div>
 
         <div className="seasonal-grid">
@@ -796,10 +824,18 @@ function App() {
 
     return (
       <div className="settings-page">
-        <div className="page-header">
-          <h1 className="page-title">Settings</h1>
-          <p className="page-description">Configure system preferences and view system information</p>
-          <button onClick={resetSettings} className="reset-btn">Reset to Defaults</button>
+        <div className="dashboard-header">
+          <div>
+            <h1 className="page-title">Settings</h1>
+            <p className="page-description">Configure system preferences and view system information</p>
+          </div>
+          <div className="header-actions">
+            <button onClick={resetSettings} className="reset-btn">Reset to Defaults</button>
+            <div className="status-indicator">
+              <div className={`status-dot ${data.systemHealth?.status === 'healthy' ? 'healthy' : 'warning'}`}></div>
+              <span>System {data.systemHealth?.status === 'healthy' ? 'Operational' : 'Checking'}</span>
+            </div>
+          </div>
         </div>
 
         <div className="settings-grid">
@@ -871,9 +907,9 @@ function App() {
                   onChange={(e) => handleSettingChange('theme', e.target.value)}
                   className="setting-select"
                 >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="auto">Auto (System)</option>
+                  <option value="light">Light Theme</option>
+                  <option value="dark">Dark Theme</option>
+                  <option value="auto">Auto (System Preference)</option>
                 </select>
                 <small className="setting-hint">Choose your preferred theme or follow system settings</small>
               </div>
@@ -905,18 +941,7 @@ function App() {
                 </select>
               </div>
 
-              <div className="setting-item">
-                <label className="setting-label">Theme</label>
-                <select 
-                  value={settings.theme}
-                  onChange={(e) => handleSettingChange('theme', e.target.value)}
-                  className="setting-select"
-                >
-                  <option value="light">Light Theme</option>
-                  <option value="dark">Dark Theme</option>
-                  <option value="auto">Auto (System Preference)</option>
-                </select>
-              </div>
+
 
               <div className="currency-preview">
                 <h4>Currency Preview:</h4>
@@ -1045,9 +1070,17 @@ function App() {
   // transactions component
   const Transactions = () => (
     <div className="transactions-page">
-      <div className="page-header">
-        <h1 className="page-title">Transactions</h1>
-        <p className="page-description">View and manage all sales transactions</p>
+      <div className="dashboard-header">
+        <div>
+          <h1 className="page-title">Transactions</h1>
+          <p className="page-description">View and manage all sales transactions</p>
+        </div>
+        <div className="header-actions">
+          <div className="status-indicator">
+            <div className={`status-dot ${data.systemHealth?.status === 'healthy' ? 'healthy' : 'warning'}`}></div>
+            <span>System {data.systemHealth?.status === 'healthy' ? 'Operational' : 'Checking'}</span>
+          </div>
+        </div>
       </div>
 
       <div className="transactions-table-card">
@@ -1093,7 +1126,7 @@ function App() {
     <div className="dashboard-content">
       <div className="dashboard-header">
         <div>
-          <h1 className="page-title">Stocast Dashboard</h1>
+          <h1 className="page-title">Dashboard</h1>
           <p className="page-description">Monitor sales, inventory, and business analytics in real-time.</p>
         </div>
         <div className="header-actions">

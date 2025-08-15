@@ -1415,7 +1415,7 @@ async def generate_analytics_visualization(
                 
                 chart_data = []
                 for _, row in sales_data.tail(days).iterrows():
-                    chardata.append({
+                    chart_data.append({
                         "date": row['sale_date'].strftime('%Y-%m-%d') if hasattr(row['sale_date'], 'strftime') else str(row['sale_date']),
                         "quantity": int(row['total_quantity']),
                         "revenue": float(row.get('total_revenue', row['total_quantity'] * 10))  # Estimate if no revenue

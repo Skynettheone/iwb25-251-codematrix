@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import '../styles/dashboard.css';
 
 const Dashboard = () => {
@@ -89,8 +89,6 @@ const Dashboard = () => {
     }).format(amount);
   };
 
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-
   if (isLoading) {
     return (
       <div className="dashboard-loading">
@@ -110,6 +108,10 @@ const Dashboard = () => {
             <p className="brand-subtitle">Business Intelligence & Analytics</p>
           </div>
           <div className="header-actions">
+            <div className="status-indicator">
+              <div className="status-dot warning"></div>
+              <span>System Checking</span>
+            </div>
             <button className="refresh-btn" onClick={fetchDashboardData}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
