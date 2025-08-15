@@ -1,11 +1,13 @@
 package com.retail.pos;
 
-import com.google.gson.Gson;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+
+import com.google.gson.Gson;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -22,7 +24,7 @@ record Transaction(String transactionId, String customerId, List<Item> items, do
 public class App extends Application {
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
-    private final Gson gson = new Gson(); // JSON converter
+    private final Gson gson = new Gson();
 
     @Override
     public void start(Stage stage) {

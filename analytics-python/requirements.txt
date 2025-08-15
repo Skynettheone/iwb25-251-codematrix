@@ -4,3 +4,9 @@ pydantic
 pandas
 scikit-learn
 numpy
+matplotlib
+seaborn
+plotly
+requests
+httpx
+python-dateutil
