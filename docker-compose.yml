@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend-ballerina
+      dockerfile: Dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      - DB_HOST=db.jknffzcmoojysdecocbj.supabase.co
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=Skynettheone#1
+      - DB_NAME=postgres
+      - DB_PORT=5432
+      - SENDGRID_API_KEY=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
+      - TWILIO_ACCOUNT_SID=AC2079dd1befacf9bde1be5095d3106344
+      - TWILIO_AUTH_TOKEN=f296bb1a0911835533d6012ade449265
+      - TWILIO_SENDER_PHONE=+18564859952
+    depends_on:
+      - analytics
+
+  analytics:
+    build:
+      context: ./analytics-python
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  dashboard:
+    build:
+      context: ./dashboard-web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:9090
+      - REACT_APP_ANALYTICS_URL=http://localhost:8000
+    depends_on:
+      - backend
+      - analytics
+
+  # pos client would need a separate setup due to gui requirements

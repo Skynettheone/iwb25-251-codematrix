@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './styles/dashboard.css';
+import NotificationSystem from './components/NotificationSystem';
+import { useAuth } from './auth/AuthContext';
+import Login from './auth/Login';
+import Signup from './auth/Signup';
 
 const Icons = {
   Dashboard: () => (
@@ -7,11 +11,7 @@ const Icons = {
       <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
     </svg>
   ),
-  Analytics: () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="nav-item-icon">
-      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
-    </svg>
-  ),
+
   Transactions: () => (
     <svg viewBox="0 0 24 24" fill="currentColor" className="nav-item-icon">
       <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
@@ -51,10 +51,21 @@ const Icons = {
     <svg viewBox="0 0 24 24" fill="currentColor">
       <path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
     </svg>
+  ),
+  Notifications: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="nav-item-icon">
+      <path d="M12,22C13.1,22 14,21.1 14,20H10C10,21.1 10.9,22 12,22M18,16V11C18,7.93 16.37,5.36 13.5,4.68V4C13.5,3.17 12.83,2.5 12,2.5S10.5,3.17 10.5,4V4.68C7.64,5.36 6,7.92 6,11V16L4,18V19H20V18L18,16M16,17H8V11C8,8.52 9.51,6.5 12,6.5S16,8.52 16,11V17Z"/>
+    </svg>
+  ),
+  Logout: () => (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="nav-item-icon">
+      <path d="M17,7L15.59,8.41L18.17,11H8V13H18.17L15.59,15.59L17,17L22,12M4,5H12V3H4C2.89,3 2,3.89 2,5V19A2,2 0 0,0 4,21H12V19H4V5Z"/>
+    </svg>
   )
 };
 
 function App() {
+  const { token, role, user, logout } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
@@ -77,9 +88,10 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+      // auth gate: if not logged in, show login/signup
+  const [authMode, setAuthMode] = useState('login');
+
   useEffect(() => {
-    loadAllData();
-    
     localStorage.setItem('theme', theme);
     
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -125,18 +137,19 @@ function App() {
     };
   }, [isMobileMenuOpen, theme]);
 
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
       const results = await Promise.allSettled([
         fetch('http://localhost:9090/api/products').then(r => r.ok ? r.json() : []),
         fetch('http://localhost:9090/api/transactions/latest?limit=20').then(r => r.ok ? r.json() : []),
         fetch('http://localhost:9090/api/products/seasonal').then(r => r.ok ? r.json() : null),
         fetch('http://localhost:8000/analytics/overview').then(r => r.ok ? r.json() : null),
         fetch('http://localhost:8000/seasonal/analytics').then(r => r.ok ? r.json() : null),
-        fetch('http://localhost:8000/health').then(r => r.ok ? r.json() : null)
+        fetch('http://localhost:8000/health', { headers: authHeader }).then(r => r.ok ? r.json() : null)
       ]);
 
       setData({
@@ -154,14 +167,21 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+      // load data on mount and when auth token changes
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
 
   // calculate stats from real data
   const stats = React.useMemo(() => {
     const totalProducts = data.products.length;
     const totalTransactions = data.transactions.length;
     const totalRevenue = data.transactions.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0);
-    const seasonalProducts = data.seasonalData?.seasonal_products?.length || 0;
+    const seasonalProducts = Array.isArray(data.seasonalData?.data)
+      ? data.seasonalData.data.length
+      : (Array.isArray(data.seasonalData) ? data.seasonalData.length : 0);
     
     return {
       totalProducts,
@@ -202,7 +222,7 @@ function App() {
   };
 
   const SmartPredictions = () => {
-    const [predictionType, setPredictionType] = useState('single'); // 'single' or 'all'
+    const [predictionType, setPredictionType] = useState('single');
     const [selectedProduct, setSelectedProduct] = useState('');
     const [predictionDays, setPredictionDays] = useState(7);
     const [predictionPeriod, setPredictionPeriod] = useState('weekly');
@@ -221,20 +241,55 @@ function App() {
       
       try {
         let url;
+        let requestBody;
+        
         if (predictionType === 'all') {
-          url = `http://localhost:8000/predict/inventory/all?days=${predictionDays}&period=${predictionPeriod}`;
+          // route through ballerina backend for orchestration
+          url = `http://localhost:9090/api/analytics/predict/inventory/all`;
+          requestBody = {
+            days: predictionDays,
+            period: predictionPeriod
+          };
         } else {
-          url = `http://localhost:8000/predict/inventory/${selectedProduct}?days=${predictionDays}&period=${predictionPeriod}`;
+          // get product details first
+          const productDetails = data.products.find(p => p.product_id === selectedProduct);
+          if (!productDetails) {
+            setPredictionError('Product not found');
+            return;
+          }
+          
+          let historyData = null;
+          try {
+            const historyResponse = await fetch(`http://localhost:9090/api/analytics/product/sales_history?product_id=${selectedProduct}`);
+            if (historyResponse.ok) {
+              historyData = await historyResponse.json();
+            } else {
+              console.warn('history fetch failed, proceeding without history');
+            }
+          } catch (e) {
+            console.warn('history fetch errored, proceeding without history');
+          }
+          url = `http://localhost:9090/api/analytics/predict/inventory/${selectedProduct}`;
+          requestBody = {
+            days_to_predict: parseInt(predictionDays),
+            prediction_type: predictionPeriod
+          };
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
         
         if (response.ok) {
           const result = await response.json();
           setPrediction(result);
         } else {
           const error = await response.json();
-          setPredictionError(error.detail || 'Prediction failed');
+          setPredictionError(error.detail || error.message || 'Prediction failed');
         }
       } catch (err) {
         setPredictionError('Connection error. Please ensure analytics service is running.');
@@ -261,6 +316,7 @@ function App() {
         <div className="prediction-card">
           <div className="card-header">
             <h3>Prediction Configuration</h3>
+
           </div>
           
           <div className="prediction-controls">
@@ -339,6 +395,7 @@ function App() {
                 className="btn btn-primary"
                 onClick={handlePrediction}
                 disabled={isLoading || (predictionType === 'single' && !selectedProduct)}
+                style={{opacity: 1, cursor: 'pointer'}}
               >
                 {isLoading ? (
                   <>
@@ -347,12 +404,18 @@ function App() {
                   </>
                 ) : (
                   <>
-                    <Icons.Analytics />
+                    <Icons.Predictions />
                     Generate Prediction
                   </>
                 )}
               </button>
             </div>
+
+            <span className="prediction-errorraised">* In first time if a error raised try second time it will work.</span>
+            
+            <p className="prediction-example-small">
+              <em>When you select "Chicken Kottu" for 7 days with weekly period, you'll see: Total forecast of 35 units, 85% confidence score, trend direction, estimated revenue of LKR 17,500, daily breakdown, stock recommendations, and interactive chart.</em>
+            </p>
           </div>
           
           {predictionError && (
@@ -362,7 +425,6 @@ function App() {
           )}
         </div>
 
-        {/* prediction results */}
         {prediction && (
           <div className="prediction-results">
             {predictionType === 'single' ? (
@@ -402,18 +464,102 @@ function App() {
                       <span className="stat-value">{prediction.total_forecast} units</span>
                     </div>
                     <div className="summary-stat">
-                      <span className="stat-label">Daily Average</span>
-                      <span className="stat-value">
-                        {(prediction.total_forecast / predictionDays).toFixed(1)} units
-                      </span>
+                      <span className="stat-label">Confidence Score</span>
+                      <span className="stat-value">{(prediction.confidence_score * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="summary-stat">
+                      <span className="stat-label">Trend Direction</span>
+                      <span className="stat-value">{prediction.trend_direction || 'stable'}</span>
                     </div>
                     <div className="summary-stat">
                       <span className="stat-label">Estimated Revenue</span>
                       <span className="stat-value">
-                        {formatCurrency(prediction.total_forecast * (prediction.product_price || 0))}
+                        {formatCurrency(prediction.estimated_revenue || (prediction.total_forecast * (prediction.product_price || 0)))}
                       </span>
                     </div>
+                    <div className="summary-stat">
+                      <span className="stat-label">Best Algorithm</span>
+                      <span className="stat-value">{prediction.best_algorithm || prediction.model_type || 'ML Model'}</span>
+                    </div>
+                    <div className="summary-stat">
+                      <span className="stat-label">Data Points Used</span>
+                      <span className="stat-value">{prediction.data_points_used || 'N/A'}</span>
+                    </div>
                   </div>
+
+                  {/* Stock Recommendations */}
+                  {prediction.stock_recommendations && (
+                    <div className="stock-recommendations">
+                      <h4>Stock Recommendations</h4>
+                      <div className="recommendations-grid">
+                        <div className="recommendation-item">
+                          <span className="label">Safety Stock</span>
+                          <span className="value">{prediction.stock_recommendations.safety_stock || 0} units</span>
+                        </div>
+                        <div className="recommendation-item">
+                          <span className="label">Reorder Point</span>
+                          <span className="value">{prediction.stock_recommendations.reorder_point || 0} units</span>
+                        </div>
+                        <div className="recommendation-item">
+                          <span className="label">Max Stock</span>
+                          <span className="value">{prediction.stock_recommendations.max_stock || 0} units</span>
+                        </div>
+                        <div className="recommendation-item">
+                          <span className="label">Current Stock Needed</span>
+                          <span className="value">{prediction.stock_recommendations.current_stock_needed || 0} units</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ML Insights */}
+                  {prediction.model_insights && (
+                    <div className="ml-insights">
+                      <h4>ML Model Insights</h4>
+                      <div className="insights-grid">
+                        <div className="insight-item">
+                          <span className="label">Model Quality</span>
+                          <span className={`value quality-${prediction.model_insights.model_quality?.toLowerCase() || 'unknown'}`}>
+                            {prediction.model_insights.model_quality || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="insight-item">
+                          <span className="label">Prediction Reliability</span>
+                          <span className={`value reliability-${prediction.model_insights.prediction_reliability?.toLowerCase() || 'unknown'}`}>
+                            {prediction.model_insights.prediction_reliability || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="insight-item">
+                          <span className="label">Data Sufficiency</span>
+                          <span className={`value sufficiency-${prediction.model_insights.data_sufficiency?.toLowerCase() || 'unknown'}`}>
+                            {prediction.model_insights.data_sufficiency || 'Unknown'}
+                          </span>
+                        </div>
+                      </div>
+                      {prediction.model_insights.recommendations && (
+                        <div className="recommendations-list">
+                          <h5>Recommendations:</h5>
+                          <ul>
+                            {prediction.model_insights.recommendations.map((rec, index) => (
+                              <li key={index}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Chart Display */}
+                  {prediction.chart_data && (
+                    <div className="prediction-chart">
+                      <h4>Demand Forecast Visualization</h4>
+                      <img 
+                        src={`data:image/png;base64,${prediction.chart_data}`} 
+                        alt="Demand Forecast Chart" 
+                        style={{ maxWidth: '100%', borderRadius: 'var(--radius-md)' }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -434,9 +580,20 @@ function App() {
                           <div className="prediction-value">
                             {productPrediction.total_forecast} units
                           </div>
-                          <div className="prediction-revenue">
-                            {formatCurrency(productPrediction.total_forecast * 100 || 0)}
+                          <div className="prediction-confidence">
+                            {(productPrediction.confidence_score * 100).toFixed(1)}% confidence
                           </div>
+                          <div className="prediction-trend">
+                            Trend: {productPrediction.trend_direction || 'stable'}
+                          </div>
+                          <div className="prediction-revenue">
+                            {formatCurrency(productPrediction.estimated_revenue || (productPrediction.total_forecast * 100))}
+                          </div>
+                          {productPrediction.stock_recommendations && (
+                            <div className="stock-info">
+                              <small>Safety: {productPrediction.stock_recommendations.safety_stock || 0} | Reorder: {productPrediction.stock_recommendations.reorder_point || 0}</small>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )) : (
@@ -454,156 +611,27 @@ function App() {
     );
   };
 
-  // analytics Component
-  const Analytics = () => {
-    const [analyticsData, setAnalyticsData] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+      // analytics component
 
-    const fetchAnalytics = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch('http://localhost:8000/analytics/overview');
-        if (response.ok) {
-          const result = await response.json();
-          setAnalyticsData(result);
-        }
-      } catch (error) {
-        console.error('Analytics fetch failed:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    useEffect(() => {
-      fetchAnalytics();
-    }, []);
-
-    return (
-      <div className="analytics-page">
-        <div className="dashboard-header">
-          <div>
-            <h1 className="page-title">Analytics</h1>
-            <p className="page-description">Comprehensive business insights and data analysis</p>
-          </div>
-          <div className="header-actions">
-            <button onClick={fetchAnalytics} className="refresh-btn">Refresh Analytics</button>
-            <div className="status-indicator">
-              <div className={`status-dot ${data.systemHealth?.status === 'healthy' ? 'healthy' : 'warning'}`}></div>
-              <span>System {data.systemHealth?.status === 'healthy' ? 'Operational' : 'Checking'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="analytics-grid">
-          <div className="analytics-card">
-            <div className="card-header">
-              <h3>Sales Performance</h3>
-            </div>
-            <div className="chart-placeholder">
-              {isLoading ? (
-                <div className="loading-state">
-                  <div className="spinner"></div>
-                  <p>Loading analytics...</p>
-                </div>
-              ) : analyticsData ? (
-                <div className="analytics-data">
-                  <div className="metric-grid">
-                    <div className="metric-item">
-                      <span className="metric-label">Total Revenue</span>
-                      <span className="metric-value">{formatCurrency(analyticsData.total_revenue || 0)}</span>
-                    </div>
-                    <div className="metric-item">
-                      <span className="metric-label">Total Orders</span>
-                      <span className="metric-value">{analyticsData.total_orders?.toLocaleString() || 'N/A'}</span>
-                    </div>
-                    <div className="metric-item">
-                      <span className="metric-label">Average Order Value</span>
-                      <span className="metric-value">{formatCurrency(analyticsData.avg_order_value || 0)}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p>No analytics data available. Ensure the analytics service is running.</p>
-              )}
-            </div>
-          </div>
-
-          <div className="analytics-card">
-            <div className="card-header">
-              <h3>Product Performance</h3>
-            </div>
-            <div className="product-analytics">
-              {Object.entries(
-                data.products.reduce((acc, product) => {
-                  const category = product.category || 'Other';
-                  acc[category] = (acc[category] || 0) + 1;
-                  return acc;
-                }, {})
-              ).map(([category, count]) => (
-                <div key={category} className="category-stat">
-                  <span className="category-name">{category}</span>
-                  <div className="category-bar">
-                    <div 
-                      className="category-fill" 
-                      style={{width: `${(count / stats.totalProducts) * 100}%`}}
-                    ></div>
-                    <span className="category-count">{count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="analytics-card">
-            <div className="card-header">
-              <h3>System Health</h3>
-            </div>
-            <div className="health-status">
-              {data.systemHealth ? (
-                <div className="health-metrics">
-                  <div className="health-item">
-                    <span className="health-label">Analytics Service</span>
-                    <span className="health-status-badge online">Online</span>
-                  </div>
-                  <div className="health-item">
-                    <span className="health-label">Backend Connection</span>
-                    <span className="health-status-badge online">Connected</span>
-                  </div>
-                  <div className="health-item">
-                    <span className="health-label">Last Updated</span>
-                    <span className="health-time">{new Date().toLocaleTimeString()}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="health-metrics">
-                  <div className="health-item">
-                    <span className="health-label">Analytics Service</span>
-                    <span className="health-status-badge offline">Offline</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // seasonal analysis component
   const SeasonalAnalysis = () => {
     const [selectedSeason, setSelectedSeason] = useState('');
     const [seasonAnalysis, setSeasonAnalysis] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [forecastDays, setForecastDays] = useState(30);
 
     const seasons = ['vesak', 'christmas', 'awurudu'];
 
     const handleSeasonAnalysis = async (season) => {
       setIsLoading(true);
       try {
-        const response = await fetch(`http://localhost:8000/seasonal/analyze/${season}`);
+        const response = await fetch(`http://localhost:8000/seasonal/analyze/${season}?forecast_days=${forecastDays}`);
         if (response.ok) {
           const result = await response.json();
           setSeasonAnalysis(result);
+        } else {
+          console.error('Season analysis failed:', response.status);
         }
       } catch (error) {
         console.error('Season analysis failed:', error);
@@ -658,40 +686,113 @@ function App() {
             <div className="card-header">
               <h3>Analyze Specific Season</h3>
             </div>
+            <div className="prediction-controls">
+              <div className="control-group">
+                <label>Forecast Period (Days)</label>
+                <input 
+                  type="number" 
+                  value={forecastDays}
+                  onChange={(e) => setForecastDays(parseInt(e.target.value) || 30)}
+                  min="7" 
+                  max="90"
+                  className="form-input"
+                />
+              </div>
+            </div>
             <div className="season-buttons">
               {seasons.map(season => (
                 <button 
                   key={season}
                   className={`season-btn ${selectedSeason === season ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedSeason(season);
-                    handleSeasonAnalysis(season);
-                  }}
+                  onClick={() => setSelectedSeason(season)}
                 >
                   {season.charAt(0).toUpperCase() + season.slice(1)}
                 </button>
               ))}
             </div>
+            
+            {selectedSeason && !seasonAnalysis && (
+              <div className="analyze-button-container">
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => handleSeasonAnalysis(selectedSeason)}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="spinner"></div>
+                      Analyzing...
+                    </>
+                  ) : (
+                                         <>
+                       <Icons.Predictions />
+                       Analyze {selectedSeason.charAt(0).toUpperCase() + selectedSeason.slice(1)} Season
+                     </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
-          {data.seasonalAnalytics?.upcoming_seasons && (
+          {data.seasonalAnalytics && (
             <div className="upcoming-seasons-card">
               <div className="card-header">
                 <h3>Upcoming Seasons</h3>
               </div>
               <div className="upcoming-seasons">
-                {data.seasonalAnalytics.upcoming_seasons.map((season, index) => (
-                  <div key={index} className="season-item">
-                    <div className="season-info">
-                      <h4>{season.season}</h4>
-                      <p>{season.days_until} days until</p>
-                    </div>
-                    <div className="season-stats">
-                      <span className="revenue">{formatCurrency(season.estimated_revenue || 0)}</span>
-                      <span className="products">{season.product_count} products</span>
-                    </div>
+                {/* Vesak Season */}
+                <div className="season-item">
+                  <div className="season-info">
+                    <h4>Vesak</h4>
                   </div>
-                ))}
+                  <div className="season-stats">
+                    <span className="days-count">{(() => {
+                      const today = new Date();
+                      const currentYear = today.getFullYear();
+                      const vesakDate = new Date(currentYear, 4, 5); // May 5th
+                      if (vesakDate < today) {
+                        vesakDate.setFullYear(currentYear + 1);
+                      }
+                      return Math.ceil((vesakDate - today) / (1000 * 60 * 60 * 24));
+                    })()} days</span>
+                  </div>
+                </div>
+                
+                {/* Christmas Season */}
+                <div className="season-item">
+                  <div className="season-info">
+                    <h4>Christmas</h4>
+                  </div>
+                  <div className="season-stats">
+                    <span className="days-count">{(() => {
+                      const today = new Date();
+                      const currentYear = today.getFullYear();
+                      const christmasDate = new Date(currentYear, 11, 25); // December 25th
+                      if (christmasDate < today) {
+                        christmasDate.setFullYear(currentYear + 1);
+                      }
+                      return Math.ceil((christmasDate - today) / (1000 * 60 * 60 * 24));
+                    })()} days</span>
+                  </div>
+                </div>
+                
+                {/* Awurudu Season */}
+                <div className="season-item">
+                  <div className="season-info">
+                    <h4>Awurudu</h4>
+                  </div>
+                  <div className="season-stats">
+                    <span className="days-count">{(() => {
+                      const today = new Date();
+                      const currentYear = today.getFullYear();
+                      const awuruduDate = new Date(currentYear, 3, 13); // April 13th
+                      if (awuruduDate < today) {
+                        awuruduDate.setFullYear(currentYear + 1);
+                      }
+                      return Math.ceil((awuruduDate - today) / (1000 * 60 * 60 * 24));
+                    })()} days</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -700,29 +801,157 @@ function App() {
             <div className="season-analysis-card">
               <div className="card-header">
                 <h3>{seasonAnalysis.season} Analysis</h3>
-              </div>
-              <div className="season-analysis-content">
-                <div className="analysis-stat">
-                  <span className="label">Seasonal Products Found:</span>
-                  <span className="value">{seasonAnalysis.seasonal_products_count}</span>
+                <div className="header-actions">
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setSeasonAnalysis(null);
+                      setSelectedSeason('');
+                    }}
+                  >
+                    ← Back to Season Selection
+                  </button>
+                  <span className="confidence-badge high">
+                    Advanced ML-Powered Predictions
+                  </span>
                 </div>
+              </div>
+              
+              {/* Summary Statistics */}
+              <div className="season-summary-stats">
+                <div className="summary-stat">
+                  <span className="stat-label">Products Analyzed</span>
+                  <span className="stat-value">{seasonAnalysis.seasonal_products_count}</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="stat-label">Total Revenue Forecast</span>
+                  <span className="stat-value">{formatCurrency(seasonAnalysis.total_predicted_revenue || 0)}</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="stat-label">Average Confidence</span>
+                  <span className="stat-value">{(seasonAnalysis.average_confidence * 100).toFixed(1)}%</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="stat-label">High Confidence Products</span>
+                  <span className="stat-value">{seasonAnalysis.high_confidence_products}</span>
+                </div>
+              </div>
+
+              {/* Seasonal Insights */}
+              {seasonAnalysis.seasonal_insights && (
+                <div className="seasonal-insights-section">
+                  <h4>Seasonal Insights</h4>
+                  <div className="insights-grid">
+                    <div className="insight-item">
+                      <span className="label">Peak Period</span>
+                      <span className="value">{seasonAnalysis.seasonal_insights.peak_period}</span>
+                    </div>
+                    <div className="insight-item">
+                      <span className="label">Recommended Stock</span>
+                      <span className="value">{Math.round(seasonAnalysis.seasonal_insights.recommended_stock)} units</span>
+                    </div>
+                    <div className="insight-item">
+                      <span className="label">High Demand Products</span>
+                      <span className="value">{seasonAnalysis.seasonal_insights.high_demand_products}</span>
+                    </div>
+                    <div className="insight-item">
+                      <span className="label">Revenue Potential</span>
+                      <span className="value">{formatCurrency(seasonAnalysis.seasonal_insights.revenue_potential)}</span>
+                    </div>
+                    <div className="insight-item">
+                      <span className="label">Season Strength</span>
+                      <span className="value">{(seasonAnalysis.seasonal_insights.season_strength * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="insight-item">
+                      <span className="label">Avg Daily Demand</span>
+                      <span className="value">{seasonAnalysis.seasonal_insights.avg_daily_demand} units</span>
+                    </div>
+                  </div>
+                  
+                  {/* Data Quality Section */}
+                  {seasonAnalysis.seasonal_insights.data_quality && (
+                    <div className="data-quality-section">
+                      <h5>Data Quality Analysis</h5>
+                      <div className="data-quality-grid">
+                        <div className="data-quality-item">
+                          <span className="label">Sufficient Data Products</span>
+                          <span className="value good">{seasonAnalysis.seasonal_insights.data_quality.sufficient_data_products}</span>
+                        </div>
+                        <div className="data-quality-item">
+                          <span className="label">Insufficient Data Products</span>
+                          <span className="value warning">{seasonAnalysis.seasonal_insights.data_quality.insufficient_data_products}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Data Quality Warnings */}
+                      {seasonAnalysis.seasonal_insights.data_quality.warnings && seasonAnalysis.seasonal_insights.data_quality.warnings.length > 0 && (
+                        <div className="data-warnings">
+                          <h6>⚠️ Data Quality Warnings:</h6>
+                          <ul>
+                            {seasonAnalysis.seasonal_insights.data_quality.warnings.map((warning, index) => (
+                              <li key={index} className="warning-item">{warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
                 
-                {seasonAnalysis.seasonal_products && seasonAnalysis.seasonal_products.length > 0 && (
-                  <div className="seasonal-products-list">
-                    <h4>Seasonal Products:</h4>
-                    {seasonAnalysis.seasonal_products.map((product, index) => (
-                      <div key={index} className="seasonal-product-item">
-                        <span className="product-name">{product.product_name}</span>
-                        <span className="product-category">{product.category}</span>
-                        <span className="product-price">{formatCurrency(product.price)}</span>
+              {/* Enhanced Product Analysis */}
+              {seasonAnalysis.seasonal_analysis && seasonAnalysis.seasonal_analysis.length > 0 && (
+                <div className="seasonal-products-list">
+                  <h4>Product Predictions</h4>
+                  <div className="products-grid">
+                    {seasonAnalysis.seasonal_analysis.map((analysis, index) => (
+                      <div key={index} className="seasonal-product-card">
+                        <div className="product-header">
+                          <h5 className="product-name">{analysis.product_name}</h5>
+                          <span className="product-category">{analysis.category}</span>
+                        </div>
+                        
+                        <div className="prediction-metrics">
+                          <div className="metric-row">
+                            <span className="metric-label">Daily Forecast:</span>
+                            <span className="metric-value">{analysis.predicted_daily} units</span>
+                          </div>
+                          <div className="metric-row">
+                            <span className="metric-label">Total Forecast:</span>
+                            <span className="metric-value">{analysis.predicted_total} units</span>
+                          </div>
+                          <div className="metric-row">
+                            <span className="metric-label">Revenue Forecast:</span>
+                            <span className="metric-value">{formatCurrency(analysis.predicted_revenue)}</span>
+                          </div>
+                          <div className="metric-row">
+                            <span className="metric-label">Price:</span>
+                            <span className="metric-value">{formatCurrency(analysis.price)}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="product-analytics">
+                          <div className="analytics-row">
+                            <span className={`confidence-badge ${analysis.confidence > 0.7 ? 'high' : analysis.confidence > 0.4 ? 'medium' : 'low'}`}>
+                              {(analysis.confidence * 100).toFixed(0)}% Confidence
+                            </span>
+                            <span className={`trend-badge ${analysis.trend_direction}`}>
+                              {analysis.trend_direction}
+                            </span>
+                          </div>
+                          <div className="data-info">
+                            <small>Data points: {analysis.data_points_used} | Seasonality: {(analysis.seasonality_score * 100).toFixed(1)}%</small>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                )}
-                
-                <div className="analysis-message">
-                  <p>{seasonAnalysis.message}</p>
                 </div>
+              )}
+                
+              <div className="analysis-message">
+                <p>{seasonAnalysis.message}</p>
+                <small>Advanced ML analysis using ensemble learning, seasonal adjustments, and trend analysis</small>
               </div>
             </div>
           )}
@@ -1104,10 +1333,10 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {data.transactions.map((transaction, index) => (
+        {data.transactions.map((transaction, index) => (
                 <tr key={index}>
                   <td>#{transaction.transaction_id}</td>
-                  <td>{new Date(transaction.transaction_date).toLocaleDateString()}</td>
+          <td>{new Date(transaction.created_at || transaction.transaction_date || Date.now()).toLocaleDateString()}</td>
                   <td>{transaction.customer_id || 'Guest'}</td>
                   <td>{formatCurrency(transaction.total_amount)}</td>
                   <td>
@@ -1193,12 +1422,12 @@ function App() {
             <span className="card-subtitle">Latest activity</span>
           </div>
           <div className="transaction-list">
-            {data.transactions.slice(0, 5).map((transaction, index) => (
+      {data.transactions.slice(0, 5).map((transaction, index) => (
               <div key={index} className="transaction-item">
                 <div className="transaction-info">
                   <span className="transaction-id">#{transaction.transaction_id}</span>
                   <span className="transaction-date">
-                    {new Date(transaction.transaction_date).toLocaleDateString()}
+        {new Date(transaction.created_at || transaction.transaction_date || Date.now()).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="transaction-amount">
@@ -1254,20 +1483,32 @@ function App() {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard />;
-      case 'analytics':
-        return <Analytics />;
+
       case 'transactions':
         return <Transactions />;
       case 'predictions':
         return <SmartPredictions />;
       case 'seasonal':
         return <SeasonalAnalysis />;
+      case 'notifications':
+        return <NotificationSystem />;
       case 'settings':
         return <Settings />;
       default:
         return <Dashboard />;
     }
   };
+
+      // if not authenticated show auth screens
+  if (!token) {
+    return (
+      <div className="app auth">
+        {authMode === 'login' 
+          ? <Login onSuccess={()=>setCurrentPage('dashboard')} onSwitchToSignup={()=>setAuthMode('signup')} /> 
+          : <Signup onSuccess={()=>setAuthMode('login')} onSwitchToLogin={()=>setAuthMode('login')} />}
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -1292,9 +1533,18 @@ function App() {
       <nav className={`sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <div className="logo">
-            <div className="logo-icon">S</div>
-            <span className="logo-text">Stocast</span>
+            <img 
+              src="/stocast_logo_long.png" 
+              alt="Stocast" 
+              className="sidebar-logo light-mode"
+            />
+            <img 
+              src="/stocast_logo_long_darmode.png" 
+              alt="Stocast" 
+              className="sidebar-logo dark-mode"
+            />
           </div>
+          
         </div>
 
         <div className="nav-menu">
@@ -1313,17 +1563,7 @@ function App() {
                 <span>Dashboard</span>
               </button>
               
-              <button 
-                type="button"
-                className={`nav-item ${currentPage === 'analytics' ? 'active' : ''}`}
-                onClick={() => {
-                  setCurrentPage('analytics');
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                <Icons.Analytics />
-                <span>Analytics</span>
-              </button>
+
               
               <button 
                 type="button"
@@ -1358,7 +1598,19 @@ function App() {
                 }}
               >
                 <Icons.Seasonal />
-                <span>Seasonal Analysis</span>
+                <span>Seasonal Analytics</span>
+              </button>
+              
+              <button 
+                type="button"
+                className={`nav-item ${currentPage === 'notifications' ? 'active' : ''}`}
+                onClick={() => {
+                  setCurrentPage('notifications');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <Icons.Notifications />
+                <span>Marketing</span>
               </button>
             </div>
           </div>
@@ -1376,6 +1628,14 @@ function App() {
               >
                 <Icons.Settings />
                 <span>Settings</span>
+              </button>
+              <button 
+                type="button"
+                className="nav-item"
+                onClick={logout}
+              >
+                <Icons.Logout />
+                <span>Logout</span>
               </button>
             </div>
           </div>

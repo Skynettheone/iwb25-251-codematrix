@@ -2,7 +2,7 @@
 /target/
 
 # java Maven build artifacts
-/pos-client-javafx/target/
+/post-client-javafx/target/
 
 # python virtual environment and cache
 /analytics-python/venv/
@@ -15,4 +15,6 @@
 .vscode/
 .idea/
 
+# backend secrets
+/backend-ballerina/Config.toml
 Config.toml

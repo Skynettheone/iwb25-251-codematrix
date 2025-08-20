@@ -1,4 +1,3 @@
-/* Modern Reset and Base Styles */
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -19,7 +18,6 @@ code {
   box-sizing: border-box;
 }
 
-/* Custom scrollbar for webkit browsers */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -39,7 +37,6 @@ code {
   background: #94a3b8;
 }
 
-/* Focus styles for accessibility */
 button:focus,
 input:focus,
 select:focus,
@@ -48,7 +45,6 @@ textarea:focus {
   outline-offset: 2px;
 }
 
-/* Loading animation */
 @keyframes fadeIn {
   from {
     opacity: 0;

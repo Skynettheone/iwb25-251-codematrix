@@ -1,11 +1,11 @@
-
 BALLERINA_BACKEND_URL = "http://localhost:9090"
 ANALYTICS_API_PORT = 8000
 
 BALLERINA_ENDPOINTS = {
     'products': '/api/products',
     'sales_data': '/api/sales/data',
-    'daily_sales': '/api/sales/daily-summary',
+
+    'daily_sales': '/api/analytics/product/sales_history',
     'transactions': '/api/transactions',
     'customers': '/api/customers'
 }
