@@ -1460,7 +1460,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     """Initialize Ballerina API connection on startup"""
-    print("Starting Smart Retail Analytics API...")
+    print("Stocast - Starting Smart Retail Analytics API...")
     if api_client.test_connection():
         print("Ballerina backend connection established")
     else:
