@@ -209,132 +209,6 @@ The setup scripts automatically create the required `Config.toml` file with:
 
 For production, update the configuration with your own credentials.
 
-## 📝 Usage Examples
-
-### Inventory Prediction
-1. Navigate to "Smart Predictions" in the dashboard
-2. Select a product or choose "All Products"
-3. Set prediction parameters (days, confidence level)
-4. View AI-generated forecasts with confidence scores
-
-### Seasonal Analytics
-1. Go to "Seasonal Analytics" section
-2. Select a season (Vesak, Christmas, Awurudu)
-3. View historical performance and predictions
-4. Analyze seasonal trends and recommendations
-
-### Marketing Campaigns
-1. Access "Marketing" section
-2. Create a new campaign with target segments
-3. Customize message templates
-4. Launch campaign and track performance
-
-## 🔧 Technical Implementation
-
-### Ballerina Backend (API Gateway)
-Ballerina serves as the central orchestration layer, chosen for its:
-
-**Strengths:**
-- Native HTTP/HTTPS support with built-in security
-- Strong typing and compile-time error detection
-- Excellent database connectivity
-- Built-in concurrency model
-- Network-aware design for microservices
-
-**Usage in Stocast:**
-- REST API endpoints for all client applications
-- Database connection management and query execution
-- Business logic implementation and validation
-- Integration with Python analytics service
-- Authentication and authorization handling
-- Third-party service integration (SendGrid, Twilio)
-
-**Challenges Faced:**
-- **Slow Compilation**: Large codebases can have extended compilation times
-- **Random Compilation Errors**: Occasional type inference issues requiring explicit type annotations
-- **Limited Ecosystem**: Fewer third-party libraries compared to other languages
-- **Learning Curve**: Team needed time to adapt to Ballerina's unique syntax and concepts
-
-### Python Analytics Service (ML Engine)
-The analytics service implements sophisticated machine learning capabilities:
-
-**ML Models Implemented:**
-- **Ensemble Learning**: Linear Regression, Ridge, Lasso, SVR, Random Forest, Gradient Boosting, Extra Trees, Neural Networks (MLP)
-- **Clustering**: K-Means (customer segmentation)
-- **Anomaly Detection**: Isolation Forest
-- **Feature Engineering**: Standard Scaler, Label Encoder, Polynomial Features, SelectKBest
-
-**Feature Engineering:**
-- Lag variables and moving averages
-- Exponential moving averages
-- Trend and volatility indicators
-- Cyclical encoding for time series
-- Seasonal decomposition
-- Interaction features
-- Z-score normalization
-
-**Advanced Capabilities:**
-- Dynamic model selection based on data characteristics
-- Intelligent confidence scoring
-- Multi-panel chart generation
-- Seasonal pattern detection
-- Anomaly detection using Isolation Forest
-
-### React Dashboard
-Modern web interface built with React.js featuring:
-- Responsive design with modern UI/UX
-- Real-time data visualization
-- Interactive charts and graphs
-- Tabbed navigation for different analytics
-- Form validation and error handling
-
-## 📊 Current System Limitations
-
-### Data Limitations
-- **Limited Historical Data**: Stocast currently uses sample data for demonstration
-- **Small Dataset Size**: ML models would benefit from larger, real-world datasets
-- **Data Quality**: Need for more diverse and realistic transaction patterns
-- **Seasonal Data**: Limited historical seasonal data for comprehensive analysis
-
-### Technical Limitations
-- **Authentication**: Currently using mock authentication for development
-- **Third-party Integrations**: SendGrid and Twilio are mocked for demo purposes
-- **Scalability**: Stocast designed for PoC, needs optimization for production
-- **Error Handling**: Basic error handling, needs more robust implementation
-
-### ML Model Limitations
-- **Training Data**: Models trained on synthetic data, may not reflect real-world patterns
-- **Feature Engineering**: Could benefit from more domain-specific features
-- **Model Validation**: Limited cross-validation due to small dataset
-- **Real-time Learning**: Models don't currently update with new data automatically
-
-## 🔮 Future Enhancements
-
-### Short-term
-- Real data integration with POS systems
-- Enhanced authentication (JWT)
-- Production-ready SendGrid/Twilio integrations
-- Improved error handling and performance optimization
-
-### Medium-term
-- **Advanced ML**: Real-time model retraining, A/B testing, fraud detection, new product forecasting
-- **Enhanced Analytics**: Customer lifetime value, churn prediction, product recommendations, price optimization
-- **Scalability**: Docker containerization, load balancing, message queuing, Redis caching
-
-### Long-term
-- **AI Features**: Computer vision inventory tracking, NLP for feedback, automated pricing, predictive maintenance
-- **Integrations**: Third-party POS APIs, e-commerce platforms, accounting software, supply chain management
-- **Business Intelligence**: Real-time dashboards, automated reporting, competitive analysis, market trend prediction
-
-## 🤝 Contributing
-
-Stocast is a proof-of-concept project demonstrating AI integration in retail systems. For production use, consider:
-
-1. **Security Review**: Implement proper security measures
-2. **Performance Testing**: Load testing and optimization
-3. **Data Privacy**: GDPR and data protection compliance
-4. **Scalability Planning**: Architecture for growth
-
 ## 🔧 Troubleshooting
 
 ### Common Issues and Solutions
@@ -652,7 +526,133 @@ If you encounter issues not covered above:
 - **Storage**: At least 2GB free space
 - **Network**: Internet connection for initial setup
 
----
+## 📝 Usage Examples
+
+### Inventory Prediction
+1. Navigate to "Smart Predictions" in the dashboard
+2. Select a product or choose "All Products"
+3. Set prediction parameters (days, confidence level)
+4. View AI-generated forecasts with confidence scores
+
+### Seasonal Analytics
+1. Go to "Seasonal Analytics" section
+2. Select a season (Vesak, Christmas, Awurudu)
+3. View historical performance and predictions
+4. Analyze seasonal trends and recommendations
+
+### Marketing Campaigns
+1. Access "Marketing" section
+2. Create a new campaign with target segments
+3. Customize message templates
+4. Launch campaign and track performance
+
+## 🔧 Technical Implementation
+
+### Ballerina Backend (API Gateway)
+Ballerina serves as the central orchestration layer, chosen for its:
+
+**Strengths:**
+- Native HTTP/HTTPS support with built-in security
+- Strong typing and compile-time error detection
+- Excellent database connectivity
+- Built-in concurrency model
+- Network-aware design for microservices
+
+**Usage in Stocast:**
+- REST API endpoints for all client applications
+- Database connection management and query execution
+- Business logic implementation and validation
+- Integration with Python analytics service
+- Authentication and authorization handling
+- Third-party service integration (SendGrid, Twilio)
+
+**Challenges Faced:**
+- **Slow Compilation**: Large codebases can have extended compilation times
+- **Random Compilation Errors**: Occasional type inference issues requiring explicit type annotations
+- **Limited Ecosystem**: Fewer third-party libraries compared to other languages
+- **Learning Curve**: Team needed time to adapt to Ballerina's unique syntax and concepts
+
+### Python Analytics Service (ML Engine)
+The analytics service implements sophisticated machine learning capabilities:
+
+**ML Models Implemented:**
+- **Ensemble Learning**: Linear Regression, Ridge, Lasso, SVR, Random Forest, Gradient Boosting, Extra Trees, Neural Networks (MLP)
+- **Clustering**: K-Means (customer segmentation)
+- **Anomaly Detection**: Isolation Forest
+- **Feature Engineering**: Standard Scaler, Label Encoder, Polynomial Features, SelectKBest
+
+**Feature Engineering:**
+- Lag variables and moving averages
+- Exponential moving averages
+- Trend and volatility indicators
+- Cyclical encoding for time series
+- Seasonal decomposition
+- Interaction features
+- Z-score normalization
+
+**Advanced Capabilities:**
+- Dynamic model selection based on data characteristics
+- Intelligent confidence scoring
+- Multi-panel chart generation
+- Seasonal pattern detection
+- Anomaly detection using Isolation Forest
+
+### React Dashboard
+Modern web interface built with React.js featuring:
+- Responsive design with modern UI/UX
+- Real-time data visualization
+- Interactive charts and graphs
+- Tabbed navigation for different analytics
+- Form validation and error handling
+
+## 📊 Current System Limitations
+
+### Data Limitations
+- **Limited Historical Data**: Stocast currently uses sample data for demonstration
+- **Small Dataset Size**: ML models would benefit from larger, real-world datasets
+- **Data Quality**: Need for more diverse and realistic transaction patterns
+- **Seasonal Data**: Limited historical seasonal data for comprehensive analysis
+
+### Technical Limitations
+- **Authentication**: Currently using mock authentication for development
+- **Third-party Integrations**: SendGrid and Twilio are mocked for demo purposes
+- **Scalability**: Stocast designed for PoC, needs optimization for production
+- **Error Handling**: Basic error handling, needs more robust implementation
+
+### ML Model Limitations
+- **Training Data**: Models trained on synthetic data, may not reflect real-world patterns
+- **Feature Engineering**: Could benefit from more domain-specific features
+- **Model Validation**: Limited cross-validation due to small dataset
+- **Real-time Learning**: Models don't currently update with new data automatically
+
+## 🔮 Future Enhancements
+
+### Short-term
+- Real data integration with POS systems
+- Enhanced authentication (JWT)
+- Production-ready SendGrid/Twilio integrations
+- Improved error handling and performance optimization
+
+### Medium-term
+- **Advanced ML**: Real-time model retraining, A/B testing, fraud detection, new product forecasting
+- **Enhanced Analytics**: Customer lifetime value, churn prediction, product recommendations, price optimization
+- **Scalability**: Docker containerization, load balancing, message queuing, Redis caching
+
+### Long-term
+- **AI Features**: Computer vision inventory tracking, NLP for feedback, automated pricing, predictive maintenance
+- **Integrations**: Third-party POS APIs, e-commerce platforms, accounting software, supply chain management
+- **Business Intelligence**: Real-time dashboards, automated reporting, competitive analysis, market trend prediction
+
+## 🤝 Contributing
+
+Stocast is a proof-of-concept project demonstrating AI integration in retail systems. For production use, consider:
+
+1. **Security Review**: Implement proper security measures
+2. **Performance Testing**: Load testing and optimization
+3. **Data Privacy**: GDPR and data protection compliance
+4. **Scalability Planning**: Architecture for growth
+
+
 
 ## 📄 License
 
