@@ -13,7 +13,7 @@ const Login = ({ onSuccess, onSwitchToSignup }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login, demoLogin, loading: authLoading, error: authError } = useAuth();
+  const { login, demoLogin, error: authError } = useAuth();
 
   const handleInputChange = (e) => {
     setFormData({

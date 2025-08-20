@@ -80,7 +80,7 @@ echo "========================================"
 echo
 echo "to start the system:"
 echo "1. backend: cd backend-ballerina && bal run"
-echo "2. analytics: cd analytics-python && python app.py"
+echo "2. analytics: cd analytics-python && uvicorn app:app --reload"
 echo "3. dashboard: cd dashboard-web && npm start"
 echo "4. pos client: cd post-client-javafx && mvn javafx:run"
 echo

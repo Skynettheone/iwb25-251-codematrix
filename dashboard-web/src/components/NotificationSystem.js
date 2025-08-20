@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './NotificationSystem.css';
-import { useAuth } from '../auth/AuthContext';
 
 const NotificationSystem = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const { token } = useAuth();
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   

@@ -20,7 +20,7 @@ echo backend is ready!
 
 echo.
 echo 2. starting analytics service (python)...
-start "Python Analytics" cmd /k "cd analytics-python && venv\Scripts\activate.bat && python app.py"
+start "Python Analytics" cmd /k "cd analytics-python && venv\Scripts\activate.bat && uvicorn app:app --reload"
 
 echo waiting for analytics to start (15 seconds)...
 timeout /t 15 /nobreak >nul

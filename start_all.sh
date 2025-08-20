@@ -22,9 +22,9 @@ echo "backend is ready!"
 
 echo
 echo "2. starting analytics service (python)..."
-gnome-terminal --title="Python Analytics" -- bash -c "cd analytics-python && source venv/bin/activate && python app.py; exec bash" &
+gnome-terminal --title="Python Analytics" -- bash -c "cd analytics-python && source venv/bin/activate && uvicorn app:app --reload; exec bash" &
 if [ $? -ne 0 ]; then
-    xterm -title "Python Analytics" -e "cd analytics-python && source venv/bin/activate && python app.py; bash" &
+    xterm -title "Python Analytics" -e "cd analytics-python && source venv/bin/activate && uvicorn app:app --reload; bash" &
 fi
 
 echo "waiting for analytics to start (15 seconds)..."

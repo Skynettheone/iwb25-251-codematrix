@@ -135,7 +135,7 @@ venv\Scripts\activate.bat
 # Linux/Mac
 source venv/bin/activate
 pip install -r requirements.txt
-python app.py
+uvicorn app:app --reload
 ```
 
 4. **Dashboard Setup (React)**
@@ -180,7 +180,7 @@ bal run
 ```bash
 cd analytics-python
 source venv/bin/activate  # or venv\Scripts\activate.bat on Windows
-python app.py
+uvicorn app:app --reload
 ```
 
 **Terminal 3 - Dashboard:**
@@ -334,6 +334,325 @@ Stocast is a proof-of-concept project demonstrating AI integration in retail sys
 2. **Performance Testing**: Load testing and optimization
 3. **Data Privacy**: GDPR and data protection compliance
 4. **Scalability Planning**: Architecture for growth
+
+## 🔧 Troubleshooting
+
+### Common Issues and Solutions
+
+#### **Python/Environment Issues**
+
+**Problem: "Python was not found" or "python is not recognized"**
+```bash
+# Solution 1: Use py launcher (Windows)
+py -m venv venv
+py --version
+
+# Solution 2: Check PATH environment variable
+# Add Python installation directory to system PATH
+# Usually: C:\Users\YourUsername\AppData\Local\Programs\Python\Python3x\
+
+# Solution 3: Use full path
+C:\Python3x\python.exe -m venv venv
+```
+
+**Problem: Virtual environment activation fails**
+```bash
+# Windows PowerShell (if execution policy blocks scripts)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Windows Command Prompt
+venv\Scripts\activate.bat
+
+# Linux/Mac
+source venv/bin/activate
+```
+
+**Problem: "uvicorn not found" after pip install**
+```bash
+# Solution: Install uvicorn explicitly
+pip install uvicorn[standard]
+pip install fastapi uvicorn
+
+# Or use the full module path
+python -m uvicorn app:app --reload
+```
+
+#### **Port Conflicts**
+
+**Problem: "Address already in use" errors**
+```bash
+# Check what's using the port
+# Windows
+netstat -ano | findstr :8000
+netstat -ano | findstr :9090
+netstat -ano | findstr :3000
+
+# Linux/Mac
+lsof -i :8000
+lsof -i :9090
+lsof -i :3000
+
+# Kill the process using the port
+# Windows (replace PID with actual process ID)
+taskkill /PID <PID> /F
+
+# Linux/Mac
+kill -9 <PID>
+```
+
+**Problem: Services can't communicate with each other**
+```bash
+# Check if services are running on correct ports
+curl http://localhost:9090/health  # Backend
+curl http://localhost:8000/health  # Analytics
+curl http://localhost:3000         # Dashboard
+
+# Verify firewall settings
+# Windows: Check Windows Defender Firewall
+# Linux: Check iptables/ufw
+```
+
+#### **Ballerina Backend Issues**
+
+**Problem: "bal command not found"**
+```bash
+# Solution 1: Install Ballerina
+# Download from: https://ballerina.io/downloads/
+
+# Solution 2: Add to PATH
+# Add Ballerina bin directory to system PATH
+# Usually: C:\Program Files\Ballerina\bin
+
+# Solution 3: Use full path
+"C:\Program Files\Ballerina\bin\bal.exe" run
+```
+
+**Problem: Ballerina compilation errors**
+```bash
+# Clean and rebuild
+bal clean
+bal build
+bal run
+
+# Check Ballerina version
+bal version
+
+# Update Ballerina if needed
+bal dist update
+```
+
+**Problem: Database connection issues**
+```bash
+# Check Config.toml file exists in backend-ballerina/
+# Verify database credentials
+# Test connection manually
+```
+
+#### **Node.js/React Issues**
+
+**Problem: "node is not recognized"**
+```bash
+# Solution 1: Install Node.js
+# Download from: https://nodejs.org/
+
+# Solution 2: Check PATH
+# Add Node.js to system PATH
+# Usually: C:\Program Files\nodejs\
+
+# Solution 3: Use nvm (Node Version Manager)
+nvm install 16
+nvm use 16
+```
+
+**Problem: npm install fails**
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Delete node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Check Node.js version compatibility
+node --version
+npm --version
+```
+
+**Problem: React app won't start**
+```bash
+# Check for port conflicts
+# Try different port
+PORT=3001 npm start
+
+# Clear browser cache
+# Check browser console for errors
+```
+
+**Problem: "'react-scripts' is not recognized"**
+```bash
+# Solution 1: Install react-scripts explicitly
+npm install react-scripts
+
+# Solution 2: Clean reinstall
+rm -rf node_modules package-lock.json
+npm install
+
+# Solution 3: Use npx to run react-scripts
+npx react-scripts start
+
+# Solution 4: Check if react-scripts is in package.json
+# Make sure "react-scripts" is listed in dependencies
+
+# Solution 5: Install globally (if needed)
+npm install -g react-scripts
+```
+
+#### **Java/JavaFX Issues**
+
+**Problem: "java is not recognized"**
+```bash
+# Solution 1: Install Java 17+
+# Download from: https://adoptium.net/
+
+# Solution 2: Set JAVA_HOME
+# Windows: Set JAVA_HOME environment variable
+# Linux/Mac: export JAVA_HOME=/path/to/java
+
+# Solution 3: Check Java version
+java -version
+javac -version
+```
+
+**Problem: Maven build fails**
+```bash
+# Clean and rebuild
+mvn clean install
+
+# Check Maven version
+mvn --version
+
+# Update Maven if needed
+# Download from: https://maven.apache.org/download.cgi
+```
+
+**Problem: JavaFX runtime not found**
+```bash
+# Solution 1: Install JavaFX SDK
+# Download from: https://openjfx.io/
+
+# Solution 2: Use Maven JavaFX plugin (already configured)
+mvn javafx:run
+
+# Solution 3: Set JavaFX module path
+# Add to VM options: --module-path /path/to/javafx-sdk/lib --add-modules javafx.controls,javafx.fxml
+```
+
+#### **Docker Issues**
+
+**Problem: Docker containers won't start**
+```bash
+# Check Docker is running
+docker --version
+docker ps
+
+# Clean up containers
+docker-compose down
+docker system prune -f
+
+# Rebuild containers
+docker-compose up --build
+```
+
+**Problem: Port conflicts with Docker**
+```bash
+# Check container ports
+docker ps -a
+
+# Stop conflicting containers
+docker stop <container_id>
+
+# Use different ports in docker-compose.yml
+```
+
+#### **Network/Connectivity Issues**
+
+**Problem: Services can't reach each other**
+```bash
+# Check if all services are running
+# Verify URLs in configuration files
+# Test with curl or browser
+
+# Common URLs to test:
+curl http://localhost:9090/health
+curl http://localhost:8000/health
+curl http://localhost:3000
+```
+
+**Problem: CORS errors in browser**
+```bash
+# Check CORS configuration in FastAPI app
+# Verify frontend URLs are allowed
+# Clear browser cache and cookies
+```
+
+#### **Performance Issues**
+
+**Problem: Slow startup times**
+```bash
+# Check system resources
+# Close unnecessary applications
+# Increase timeout values in scripts
+
+# For Python analytics:
+# Reduce ML model complexity in development
+# Use smaller datasets for testing
+```
+
+**Problem: Memory issues**
+```bash
+# Check available RAM
+# Close other applications
+# Restart services one by one
+
+# For Python analytics:
+# Monitor memory usage during ML operations
+# Consider using smaller datasets
+```
+
+#### **Data/Configuration Issues**
+
+**Problem: Missing configuration files**
+```bash
+# Check if Config.toml exists in backend-ballerina/
+# Verify all required environment variables
+# Check config.py in analytics-python/
+```
+
+**Problem: Sample data not loading**
+```bash
+# Check database connection
+# Verify API endpoints are working
+# Check for data generation scripts
+```
+
+### **Getting Help**
+
+If you encounter issues not covered above:
+
+1. **Check the logs** - Look at terminal output for error messages
+2. **Verify prerequisites** - Ensure all required software is installed
+3. **Check versions** - Verify compatible versions of all tools
+4. **Restart services** - Sometimes a simple restart fixes issues
+5. **Use one-click setup** - Try the automated setup scripts first
+
+### **System Requirements**
+
+- **OS**: Windows 10+, macOS 10.15+, Ubuntu 18.04+
+- **RAM**: Minimum 8GB, Recommended 16GB
+- **Storage**: At least 2GB free space
+- **Network**: Internet connection for initial setup
+
+---
 
 ## 📄 License
 

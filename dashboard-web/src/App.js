@@ -65,7 +65,7 @@ const Icons = {
 };
 
 function App() {
-  const { token, role, user, logout } = useAuth();
+  const { token, logout } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
@@ -258,12 +258,9 @@ function App() {
             return;
           }
           
-          let historyData = null;
           try {
             const historyResponse = await fetch(`http://localhost:9090/api/analytics/product/sales_history?product_id=${selectedProduct}`);
-            if (historyResponse.ok) {
-              historyData = await historyResponse.json();
-            } else {
+            if (!historyResponse.ok) {
               console.warn('history fetch failed, proceeding without history');
             }
           } catch (e) {
