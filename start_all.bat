@@ -2,6 +2,9 @@
 echo starting all stocast services in order...
 echo.
 
+echo 1. starting backend (ballerina)...
+start "Ballerina Backend" cmd /k "cd backend-ballerina && bal run"
+
 echo waiting for backend to start (30 seconds)...
 timeout /t 30 /nobreak >nul
 

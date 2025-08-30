@@ -3,6 +3,22 @@
 echo "starting all stocast services in order..."
 echo
 
+echo "1. starting backend (ballerina)..."
+gnome-terminal --title="Ballerina Backend" -- bash -c "cd backend-ballerina && bal run; exec bash" &
+if [ $? -ne 0 ]; then
+    xterm -title "Ballerina Backend" -e "cd backend-ballerina && bal run; bash" &
+fi
+
+echo "waiting for backend to start (30 seconds)..."
+sleep 30
+
+echo "checking if backend is ready..."
+while ! curl -s http://localhost:9090/health > /dev/null 2>&1; do
+    echo "backend not ready yet, waiting 5 more seconds..."
+    sleep 5
+done
+echo "backend is ready!"
+
 echo
 echo "2. starting analytics service (python)..."
 gnome-terminal --title="Python Analytics" -- bash -c "cd analytics-python && source venv/bin/activate && uvicorn app:app --reload; exec bash" &
