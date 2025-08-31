@@ -207,6 +207,8 @@ The setup scripts automatically create the required `Config.toml` file with:
 - SendGrid API key (email notifications)
 - Twilio credentials (SMS notifications)
 
+> **⚠️ Important Note**: The configurations shared in this project are **development/mocked configurations** for demonstration purposes only. In real-world scenarios, you would never share actual production credentials, API keys, or database connections. These are safe to use for learning, testing, and evaluation purposes.
+
 For production, update the configuration with your own credentials.
 
 ## 🔧 Troubleshooting
@@ -321,6 +323,25 @@ bal dist update
 # Verify database credentials
 # Test connection manually
 ```
+
+**Problem: Supabase connection fails or service is offline**
+If you encounter errors like:
+```
+Error in SQL connector configuration: Failed to initialize pool: The connection attempt failed
+```
+
+**Solution: Set up your own Supabase database**
+1. **Create new Supabase project** at [supabase.com](https://supabase.com)
+2. **Follow the complete setup guide** in `backend-ballerina/SUPABASE_SETUP_INSTRUCTIONS.md`
+3. **Update your Config.toml** with new database credentials
+4. **Run the provided SQL scripts** to recreate all tables and sample data
+
+This guide includes:
+- Complete database schema creation
+- All sample data (customers, products, transactions)
+- Historical data from 2024-2025
+- Functions and triggers for daily sales tracking
+- Step-by-step instructions for evaluators
 
 #### **Node.js/React Issues**
 
