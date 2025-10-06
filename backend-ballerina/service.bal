@@ -3,6 +3,7 @@ import ballerina/log;
 import ballerina/sql;
 import ballerina/crypto;
 import ballerina/uuid;
+// Note: time/runtime sleep not available in this Ballerina distribution; retries are immediate.
 
 import ballerinax/postgresql;
 // import ballerinax/sendgrid as sgrid;
@@ -18,6 +19,12 @@ configurable int port = ?;
 // nightly segmentation scheduler configuration
 configurable boolean enableNightlySegmentation = true;
 configurable int segmentationIntervalHours = 24;
+
+// segmentation orchestration configuration
+// When true, backend will try Python analytics first; otherwise it will use fallback logic only
+configurable boolean useAnalyticsForSegmentation = true;
+configurable int analyticsSegmentationMaxAttempts = 3;
+configurable int analyticsSegmentationInitialDelayMs = 200;
 
 // notification service configurations
 type SendgridConfig record {|
@@ -132,6 +139,30 @@ type AnalyticsResponse record {|
     CustomerSegmentUpdate[] data;
 |};
 
+// normalize any incoming segment names to the allowed set: New, Champion, Loyal, At-Risk
+function normalizeSegmentName(string seg) returns string {
+    string s = seg.toLowerAscii();
+    if s == "champion" {
+        return "Champion";
+    } else if s == "loyal" {
+        return "Loyal";
+    } else if s == "at-risk" || s == "atrisk" || s == "needs attention" || s == "needs_attention" {
+        // map analytics "Needs Attention" to "At-Risk"
+        return "At-Risk";
+    } else if s == "potential loyalist" || s == "potential_loyalist" {
+        // collapse potential loyalist into Loyal for the 4-bucket scheme
+        return "Loyal";
+    } else if s == "regular" {
+        // legacy label -> map to New in 4-bucket scheme
+        return "New";
+    } else if s == "new" {
+        return "New";
+    } else {
+        // default safe bucket
+        return "New";
+    }
+}
+
 // ===== reusable segmentation logic =====
 function performCustomerSegmentation() returns json|error {
     log:printInfo("Starting customer segmentation...");
@@ -144,38 +175,109 @@ function performCustomerSegmentation() returns json|error {
         return { status: "success", message: "No customers found for segmentation." }; 
     }
     
+    // Try to call analytics service to compute RFM/KMeans segments for all customers in one call.
+    // If analytics service is unavailable or returns an error, fall back to the legacy frequency-only method.
     int updatedCount = 0;
-    foreach var customer in customers {
-        stream<record {| decimal total_amount; string created_at; |}, sql:Error?> txStream = dbClient->query(`SELECT total_amount, created_at::text FROM transactions WHERE customer_id = ${customer.customer_id} ORDER BY created_at DESC`);
-        record {| decimal total_amount; string created_at; |}[] transactions = check from var row in txStream select row;
-        
-        string segment = "New";
-        
-        if transactions.length() > 0 {
-            decimal totalSpent = 0;
-            foreach var tx in transactions {
-                totalSpent = totalSpent + tx.total_amount;
-            }
-            
-            if transactions.length() >= 5 {
-                segment = "Champion";
-            } else if transactions.length() >= 3 {
-                segment = "Loyal";
-            } else if transactions.length() >= 1 {
-                segment = "Regular";
+    json[] transactionsPayload = [];
+
+    // Gather all transactions to send to analytics service
+    stream<record {| string transaction_id; string customer_id; decimal total_amount; string created_at; |}, sql:Error?> allTxStream = dbClient->query(`SELECT transaction_id, customer_id, total_amount, created_at::text FROM transactions ORDER BY created_at ASC`);
+    record {| string transaction_id; string customer_id; decimal total_amount; string created_at; |}[] allTransactions = check from var row in allTxStream select row;
+
+    foreach var t in allTransactions {
+        // build a minimal json record compatible with analytics-python expectations
+        json tx = {
+            "transaction_id": t.transaction_id,
+            "customer_id": t.customer_id,
+            "total_amount": t.total_amount,
+            "created_at": t.created_at
+        };
+        // append to the json array
+        transactionsPayload.push(tx);
+    }
+
+    boolean analyticsSucceeded = false;
+    if (useAnalyticsForSegmentation && allTransactions.length() > 0) {
+    int attempts = 0;
+        while attempts < analyticsSegmentationMaxAttempts && !analyticsSucceeded {
+            attempts += 1;
+            // call analytics service
+            http:Response|error resp = analyticsClient->post("/customers/segment", transactionsPayload);
+            if resp is http:Response {
+                if resp.statusCode == 200 {
+                    json respJson = check resp.getJsonPayload();
+                    if respJson is map<any> {
+                        // expected shape: { status: 'success', data: [ { customer_id: ..., Segment: ... }, ... ] }
+                        if respJson["data"] is json[] {
+                            json[] data = <json[]>respJson["data"];
+                            foreach var item in data {
+                                if item is map<any> {
+                                    any custAny = item["customer_id"];
+                                    any segAny = item["Segment"];
+                                    string? custId = null;
+                                    string? seg = null;
+                                    if custAny is string { custId = custAny; }
+                                    else if custAny is int { custId = string `${custAny}`; }
+
+                                    if segAny is string { seg = normalizeSegmentName(segAny); }
+
+                                    if custId is string && seg is string {
+                                        sql:ExecutionResult res = check dbClient->execute(`UPDATE customers SET segment = ${seg} WHERE customer_id = ${custId}`);
+                                        if (res.affectedRowCount > 0) {
+                                            _ = check dbClient->execute(`INSERT INTO customer_segments (customer_id, segment) VALUES (${custId}, ${seg})`);
+                                            updatedCount += 1;
+                                            log:printInfo(string `Updated customer ${custId} to segment: ${seg}`);
+                                        }
+                                    }
+                                }
+                            }
+                            analyticsSucceeded = true;
+                        }
+                    }
+                } else {
+                    string body = check resp.getTextPayload();
+                    log:printError("Analytics segmentation returned non-200", keyValues = {"status": string `${resp.statusCode}` , "body": body, "attempt": string `${attempts}`});
+                }
             } else {
-                segment = "At-Risk";
+                string errMsg = "unknown";
+                if resp is error { errMsg = resp.message(); }
+                log:printError(string `Failed to call analytics service for segmentation (attempt ${attempts}): ${errMsg}`);
             }
-        }
-        
-        sql:ExecutionResult res = check dbClient->execute(`UPDATE customers SET segment = ${segment} WHERE customer_id = ${customer.customer_id}`);
-        if (res.affectedRowCount > 0) { 
-            _ = check dbClient->execute(`INSERT INTO customer_segments (customer_id, segment) VALUES (${customer.customer_id}, ${segment})`);
-            updatedCount += 1; 
-            log:printInfo(string `Updated customer ${customer.customer_id} to segment: ${segment}`);
+
+            // Backoff disabled: sleep not available in this distribution; retries are immediate.
         }
     }
-    
+
+    if (!analyticsSucceeded) {
+        // Fallback: legacy frequency-based segmentation per-customer (safe and deterministic)
+        log:printWarn("Analytics segmentation failed or returned no data - falling back to legacy segmentation");
+        foreach var customer in customers {
+            stream<record {| decimal total_amount; string created_at; |}, sql:Error?> txStream = dbClient->query(`SELECT total_amount, created_at::text FROM transactions WHERE customer_id = ${customer.customer_id} ORDER BY created_at DESC`);
+            record {| decimal total_amount; string created_at; |}[] transactions = check from var row in txStream select row;
+
+            string segment = "New";
+            if transactions.length() > 0 {
+                if transactions.length() >= 5 {
+                    segment = "Champion";
+                } else if transactions.length() >= 3 {
+                    segment = "Loyal";
+                } else if transactions.length() >= 1 {
+                    // collapse single-purchase customers into "New" for the 4-bucket scheme
+                    segment = "New";
+                } else {
+                    segment = "At-Risk";
+                }
+            }
+
+            sql:ExecutionResult res = check dbClient->execute(`UPDATE customers SET segment = ${segment} WHERE customer_id = ${customer.customer_id}`);
+            if (res.affectedRowCount > 0) {
+                _ = check dbClient->execute(`INSERT INTO customer_segments (customer_id, segment) VALUES (${customer.customer_id}, ${segment})`);
+                updatedCount += 1;
+                log:printInfo(string `Updated customer ${customer.customer_id} to segment (fallback): ${segment}`);
+            }
+        }
+    }
+
     log:printInfo(string `Customer segmentation complete. Updated ${updatedCount} records.`);
     return { status: "success", message: string `Segmentation complete. Updated ${updatedCount} customers.` };
 }
